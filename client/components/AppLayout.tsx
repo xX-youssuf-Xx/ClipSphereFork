@@ -10,10 +10,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
-import API from "@/lib/api";
+import API, { getBaseUrl, getS3Endpoint } from "@/lib/api";
 
-const S3_ENDPOINT = process.env.NEXT_PUBLIC_S3_ENDPOINT || "http://localhost:9000";
-const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
+const S3_ENDPOINT = getS3Endpoint();
+const SOCKET_URL = getBaseUrl();
 
 function useUnreadCount(userId: string | undefined) {
   const [count, setCount] = useState(0);

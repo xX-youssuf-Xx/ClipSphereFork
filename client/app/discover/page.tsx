@@ -10,9 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import { useAuth } from "@/contexts/AuthContext";
-import API from "@/lib/api";
+import API, { getS3Endpoint } from "@/lib/api";
 
-const S3_ENDPOINT = process.env.NEXT_PUBLIC_S3_ENDPOINT || "http://localhost:9000";
+const S3_ENDPOINT = getS3Endpoint();
 
 function formatCount(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";

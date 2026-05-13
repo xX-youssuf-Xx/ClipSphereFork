@@ -25,9 +25,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import API from "@/lib/api";
+import API, { getS3Endpoint } from "@/lib/api";
 
-const S3_ENDPOINT = process.env.NEXT_PUBLIC_S3_ENDPOINT || "http://localhost:9000";
+const S3_ENDPOINT = getS3Endpoint();
 
 export default function VideoPlayerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);

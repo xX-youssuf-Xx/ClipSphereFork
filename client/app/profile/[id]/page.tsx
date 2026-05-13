@@ -17,9 +17,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import API from "@/lib/api";
+import API, { getS3Endpoint } from "@/lib/api";
 
-const S3_ENDPOINT = process.env.NEXT_PUBLIC_S3_ENDPOINT || "http://localhost:9000";
+const S3_ENDPOINT = getS3Endpoint();
 
 function getToken() {
   return typeof window !== "undefined" ? localStorage.getItem("token") : null;
