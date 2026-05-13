@@ -36,6 +36,8 @@ services:
   backend:
     build: ./server
     env_file: .env
+    environment:
+      - S3_PUBLIC_ENDPOINT=https://clipsphere.8bitsolutions.net:9000
     depends_on:
       - database
       - cache
