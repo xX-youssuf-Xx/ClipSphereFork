@@ -15,7 +15,8 @@ services:
       - "traefik.http.routers.clipsphere.rule=Host(`clipsphere.8bitsolutions.net`)"
       - "traefik.http.routers.clipsphere.entrypoints=websecure"
       - "traefik.http.routers.clipsphere.tls.certresolver=letsencrypt"
-      - "traefik.http.services.clipsphere.loadbalancer.server.port=80"
+      - "traefik.http.routers.clipsphere.service=clipsphere-service"
+      - "traefik.http.services.clipsphere-service.loadbalancer.server.port=80"
     restart: unless-stopped
 
   # Container A — Next.js Frontend
