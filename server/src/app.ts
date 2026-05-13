@@ -15,9 +15,13 @@ export default function createApp() {
   const app = express();
 
   app.use(cors());
-  app.use(express.json({ verify: (req: any, _res, buf) => {
-    req.rawBody = buf.toString();
-  } }));
+  app.use(express.json({ 
+    limit: '200mb',
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf.toString();
+    }
+  }));
+  app.use(express.urlencoded({ limit: '200mb' }));
   app.use(passport.initialize());
 
   app.use(requestLogger);
