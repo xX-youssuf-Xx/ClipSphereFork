@@ -1,0 +1,112 @@
+services:
+
+  # Container F — Nginx (internal gateway, Traefik fronts it)
+  nginx:
+    build: ./nginx
+    depends_on:
+      - frontend
+      - backend
+      - minio
+    networks:
+      - clipsphere-net
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.clipsphere.rule=Host(`clipsphere.8bitsolutions.net`)"
+      - "traefik.http.routers.clipsphere.entrypoints=websecure"
+      - "traefik.http.routers.clipsphere.tls.certresolver=letsencrypt"
+      - "traefik.http.services.clipsphere.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # Container A — Next.js Frontend
+  frontend:
+    build: ./client
+    env_file: .env
+    environment:
+      - NEXT_PUBLIC_API_URL=https://clipsphere.8bitsolutions.net/api
+    depends_on:
+      - backend
+    networks:
+      - clipsphere-net
+    restart: unless-stopped
+
+  # Container B — Express API
+  backend:
+    build: ./server
+    env_file: .env
+    depends_on:
+      - database
+      - cache
+      - minio
+    networks:
+      - clipsphere-net
+    restart: unless-stopped
+
+  # Container B2 — BullMQ Worker (isolated worker process)
+  worker:
+    build: ./server
+    env_file: .env
+    command: bun run worker
+    depends_on:
+      - database
+      - cache
+    networks:
+      - clipsphere-net
+    restart: unless-stopped
+
+  # Container C — MongoDB
+  database:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - clipsphere-net
+    restart: unless-stopped
+
+  # Container D — MinIO
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - clipsphere-net
+    restart: unless-stopped
+
+  # MinIO bucket init (runs once and exits)
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    networks:
+      - clipsphere-net
+    entrypoint: >
+      sh -c "
+        sleep 5 &&
+        mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} &&
+        mc mb --ignore-existing local/clipsphere &&
+        echo 'Bucket ready'
+      "
+
+  # Container E — Redis
+  cache:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - clipsphere-net
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  minio_data:
+  redis_data:
+
+networks:
+  clipsphere-net:
+    driver: bridge
+  dokploy-network:
+    external: true
