@@ -24,7 +24,8 @@ services:
     build: ./client
     env_file: .env
     environment:
-      - NEXT_PUBLIC_API_URL=https://clipsphere.8bitsolutions.net/api
+      - NEXT_PUBLIC_API_URL=https://clipsphere.8bitsolutions.net/api/v1
+      - NEXT_PUBLIC_S3_ENDPOINT=https://clipsphere.8bitsolutions.net:9000
     depends_on:
       - backend
     networks:
