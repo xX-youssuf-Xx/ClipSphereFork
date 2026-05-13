@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import API from "@/lib/api";
 
-const API = "http://localhost:5000/api/v1";
+const S3_ENDPOINT = process.env.NEXT_PUBLIC_S3_ENDPOINT || "http://localhost:9000";
 
 function authHeaders() {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;

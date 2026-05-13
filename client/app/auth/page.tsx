@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import API from "@/lib/api";
 
 export default function Auth() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function Auth() {
     setIsLoading(true);
     setError("");
     try {
-      const res = await fetch("http://localhost:5000/api/v1/auth/login", {
+       const res = await fetch(`${API}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginEmail, password: loginPassword })
@@ -60,7 +61,7 @@ export default function Auth() {
 
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/v1/auth/register", {
+       const res = await fetch(`${API}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, email, password })
@@ -283,7 +284,7 @@ export default function Auth() {
 
           <div className="space-y-3">
             <p className="text-center text-sm text-zinc-400 mb-4">Or continue with</p>
-            <Button type="button" onClick={() => window.location.href="http://localhost:5000/api/v1/auth/google"} variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800">
+            <Button type="button" onClick={() => window.location.href=`${API}/auth/google`} variant="outline" className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800">
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"

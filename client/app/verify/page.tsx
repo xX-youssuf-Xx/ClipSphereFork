@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import API from "@/lib/api";
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -65,7 +66,7 @@ function VerifyEmailContent() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:5000/api/v1/auth/verify-email", {
+       const res = await fetch(`${API}/auth/verify-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code }),

@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
 import { useAuth } from "@/contexts/AuthContext";
+import API from "@/lib/api";
 
-const API = "http://localhost:5000/api/v1";
+const S3_ENDPOINT = process.env.NEXT_PUBLIC_S3_ENDPOINT || "http://localhost:9000";
 
 function formatCount(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -114,7 +115,7 @@ export default function Discover() {
             {sorted.map((video: any) => {
               const owner = video.owner;
               const ownerName = owner?.name ?? owner?.username ?? "Unknown";
-              const ownerAvatar = owner?.avatarKey ? `http://localhost:9000/clipsphere/${owner.avatarKey}` : "";
+               const ownerAvatar = owner?.avatarKey ? `${S3_ENDPOINT}/clipsphere/${owner.avatarKey}` : "";
 
               return (
                 <Card key={video._id} className="group bg-zinc-900 border-zinc-800 overflow-hidden hover:border-violet-500/50 transition-all">
