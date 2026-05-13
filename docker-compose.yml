@@ -43,16 +43,17 @@ services:
     restart: unless-stopped
 
   # Container B2 — BullMQ Worker (isolated worker process)
-  worker:
-    build: ./server
-    env_file: .env
-    command: bun run worker
-    depends_on:
-      - database
-      - cache
-    networks:
-      - clipsphere-net
-    restart: unless-stopped
+  # TODO: Implement worker service when BullMQ queue system is ready
+  # worker:
+  #   build: ./server
+  #   env_file: .env
+  #   command: bun run worker
+  #   depends_on:
+  #     - database
+  #     - cache
+  #   networks:
+  #     - clipsphere-net
+  #   restart: unless-stopped
 
   # Container C — MongoDB
   database:

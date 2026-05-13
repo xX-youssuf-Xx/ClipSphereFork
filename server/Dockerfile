@@ -17,6 +17,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/docs ./src/docs
 COPY --from=builder /app/package.json ./package.json
 EXPOSE 5000
 CMD ["bun", "run", "start"]
