@@ -1,12 +1,12 @@
 "use client";
 
-import { useRef, useState, useEffect, KeyboardEvent, ClipboardEvent } from "react";
+import { useRef, useState, useEffect, KeyboardEvent, ClipboardEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-export default function VerifyEmail() {
+function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
@@ -160,5 +160,19 @@ export default function VerifyEmail() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmail() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+          <div className="text-zinc-400">Loading verification page...</div>
+        </div>
+      }
+    >
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
