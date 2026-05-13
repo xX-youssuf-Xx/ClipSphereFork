@@ -3,18 +3,34 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3 } from "../config/s3";
 
 /**
- * Replace internal S3 endpoint with public endpoint in presigned URL
- * Used when generating URLs for frontend consumption
+ * Transform presigned URL to use /storage/ path instead of direct port 9000
+ * This allows Nginx to handle the request and add proper CORS headers
+ * 
+ * Input:  https://clipsphere.8bitsolutions.net:9000/clipsphere/videos/...?X-Amz-...
+ * Output: https://clipsphere.8bitsolutions.net/storage/clipsphere/videos/...?X-Amz-...
  */
-function replaceEndpointInUrl(url: string): string {
+function transformPresignedUrl(url: string): string {
     if (!process.env.S3_PUBLIC_ENDPOINT) {
         return url;
     }
     
-    // Replace internal endpoint with public endpoint
-    // Internal: http://minio:9000 → External: https://clipsphere.8bitsolutions.net:9000
-    const internalEndpoint = process.env.S3_ENDPOINT!;
-    return url.replace(internalEndpoint, process.env.S3_PUBLIC_ENDPOINT);
+    try {
+        const urlObj = new URL(url);
+        const publicEndpoint = new URL(process.env.S3_PUBLIC_ENDPOINT!);
+        
+        // Replace the hostname and port with the public endpoint's hostname
+        urlObj.hostname = publicEndpoint.hostname;
+        urlObj.port = '';  // Remove port since /storage/ is on standard HTTPS
+        
+        // Replace the path from /bucket/key to /storage/bucket/key
+        const pathParts = urlObj.pathname.split('/').filter(p => p);
+        urlObj.pathname = '/storage/' + pathParts.join('/');
+        
+        return urlObj.toString();
+    } catch (error) {
+        console.error('Failed to transform presigned URL:', error);
+        return url;  // Return original URL if transformation fails
+    }
 }
 
 export async function createDownloadUrl(key: string) {
@@ -27,7 +43,7 @@ export async function createDownloadUrl(key: string) {
         expiresIn: 60 * 5,
     });
 
-    return replaceEndpointInUrl(url);
+    return transformPresignedUrl(url);
 }
 
 export async function deleteFile(key: string) {
@@ -52,5 +68,5 @@ export async function createUploadUrl(key: string, contentType: string) {
         expiresIn: 60 * 5,
     });
 
-    return replaceEndpointInUrl(url);
+    return transformPresignedUrl(url);
 }
