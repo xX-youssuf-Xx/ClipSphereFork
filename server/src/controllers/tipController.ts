@@ -85,13 +85,14 @@ export const createTipSession = async (req: Request, res: Response, _next: NextF
 
 export const handleStripeWebhook = async (req: Request, res: Response, _next: NextFunction) => {
   const reqAny = req as any;
-  const body = reqAny.rawBody || JSON.stringify(req.body);
+  const rawBody = reqAny.body;
+  const body = Buffer.isBuffer(rawBody) ? rawBody.toString("utf-8") : JSON.stringify(req.body);
   
   // For local development without signature verification
   if (process.env.NODE_ENV !== "production") {
     try {
       const event = body ? JSON.parse(body) : req.body;
-      console.log("Webhook received (no sig check):", event.type);
+      console.log("Webhook received (no sig check):", event?.type);
       
       if (event.type === "checkout.session.completed") {
         const session = event.data?.object;
