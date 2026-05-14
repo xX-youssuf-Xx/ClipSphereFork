@@ -8,7 +8,7 @@ import passport from "./config/passport";
 import stripe from "./config/stripe";
 
 export interface CustomRequest extends Request {
-  rawBody?: string;
+  rawBody?: Buffer;
 }
 
 export default function createApp() {
@@ -18,7 +18,7 @@ export default function createApp() {
   app.use(express.json({ 
     limit: '200mb',
     verify: (req: any, _res, buf) => {
-      req.rawBody = buf.toString();
+      req.rawBody = buf; // Keep as Buffer for Stripe webhook signature verification
     }
   }));
   app.use(express.urlencoded({ limit: '200mb' }));

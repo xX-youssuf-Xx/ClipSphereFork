@@ -84,42 +84,11 @@ export const createTipSession = async (req: Request, res: Response, _next: NextF
 };
 
 export const handleStripeWebhook = async (req: Request, res: Response, _next: NextFunction) => {
-  const reqAny = req as any;
-  const body = reqAny.rawBody;
-  
-  console.log("Webhook - NODE_ENV:", process.env.NODE_ENV);
-  console.log("Webhook - has rawBody:", !!body);
-  console.log("Webhook - rawBody length:", body?.length);
-  console.log("Webhook - rawBody preview:", body?.substring(0, 100));
-  console.log("Webhook - signature header:", Array.isArray(req.headers["stripe-signature"]) ? req.headers["stripe-signature"][0]?.substring(0, 20) : req.headers["stripe-signature"]?.substring(0, 20));
-  
-  // For local development without signature verification
-  if (process.env.NODE_ENV !== "production") {
-    try {
-      const event = body ? JSON.parse(body) : req.body;
-      console.log("Webhook received (no sig check):", event?.type);
-      
-      if (event.type === "checkout.session.completed") {
-        const session = event.data?.object;
-        if (session?.metadata?.recipientId) {
-          await Tip.findOneAndUpdate(
-            { stripeSessionId: session.id },
-            { status: "completed" }
-          );
-        }
-      }
-      return res.json({ received: true });
-    } catch (err) {
-      console.error("Webhook parse error:", err);
-      return res.status(400).json({ message: "Parse error" });
-    }
-  }
-
-  // Production: full verification
   if (!stripe) {
     return res.status(500).json({ message: "Stripe not configured" });
   }
 
+  const rawBody = (req as any).rawBody as Buffer | undefined;
   const sig = req.headers["stripe-signature"] as string;
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -127,37 +96,25 @@ export const handleStripeWebhook = async (req: Request, res: Response, _next: Ne
     return res.status(500).json({ message: "Webhook secret not configured" });
   }
 
-  // Parse signature header - format: t=timestamp,v1=signature
-  const sigParts = (sig as string).split(',');
-  const timestamp = sigParts.find(p => p.startsWith('t='))?.split('=')[1];
-  const stripeSignature = sigParts.find(p => p.startsWith('v1='))?.split('=')[1];
-  
-  console.log("Webhook - timestamp:", timestamp);
-  console.log("Webhook - stripe signature:", stripeSignature?.substring(0, 20));
-  
-  // Debug: Check body for any hidden characters
-  console.log("Webhook - body starts with:", body.substring(0, 50).replace(/\n/g, '\\n'));
-  console.log("Webhook - body ends with:", body.substring(body.length - 50).replace(/\n/g, '\\n'));
-  console.log("Webhook - body trim ends with:", body.trimEnd().substring(body.trimEnd().length - 50).replace(/\n/g, '\\n'));
-  
-  // Compute expected signature - Stripe uses: HMAC-SHA256(timestamp.body, secret)
-  const crypto = await import('crypto');
-  const signedPayload = `${timestamp}.${body}`;
-  const expectedSig = crypto.createHmac('sha256', endpointSecret)
-    .update(signedPayload, 'utf8')
-    .digest('hex');
-  
-  console.log("Webhook - signedPayload length:", signedPayload.length);
-  console.log("Webhook - computed sig:", expectedSig);
-  console.log("Webhook - sigs match:", expectedSig === stripeSignature);
-  
+  if (!rawBody) {
+    console.error("Webhook - rawBody is missing");
+    return res.status(400).json({ message: "Raw body not available" });
+  }
+
+  console.log("Webhook - rawBody type:", typeof rawBody, Buffer.isBuffer(rawBody));
+  console.log("Webhook - rawBody length:", rawBody.length);
+  console.log("Webhook - sig header prefix:", sig?.substring(0, 30));
+
   let event: any;
   try {
-    event = await stripe.webhooks.constructEventAsync(body, sig, endpointSecret);
+    // Pass the raw Buffer directly - Stripe needs the exact bytes it originally sent
+    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
   } catch (err: any) {
     console.error("Webhook signature error:", err.message);
     return res.status(400).json({ message: `Webhook Error: ${err.message}` });
   }
+
+  console.log("Webhook event received:", event.type);
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
@@ -168,6 +125,7 @@ export const handleStripeWebhook = async (req: Request, res: Response, _next: Ne
         { stripeSessionId: session.id },
         { status: "completed" }
       );
+      console.log("Tip marked as completed for session:", session.id);
     }
   }
 
