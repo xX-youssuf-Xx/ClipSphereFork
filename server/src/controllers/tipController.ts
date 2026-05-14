@@ -85,10 +85,13 @@ export const createTipSession = async (req: Request, res: Response, _next: NextF
 
 export const handleStripeWebhook = async (req: Request, res: Response, _next: NextFunction) => {
   const reqAny = req as any;
-  const body = reqAny.rawBody || (Buffer.isBuffer(reqAny.body) ? reqAny.body.toString("utf-8") : JSON.stringify(reqAny.body));
+  const body = reqAny.rawBody;
   
   console.log("Webhook - NODE_ENV:", process.env.NODE_ENV);
-  console.log("Webhook - body length:", body?.length);
+  console.log("Webhook - has rawBody:", !!body);
+  console.log("Webhook - rawBody length:", body?.length);
+  console.log("Webhook - rawBody preview:", body?.substring(0, 100));
+  console.log("Webhook - signature header:", req.headers["stripe-signature"]?.substring(0, 20));
   
   // For local development without signature verification
   if (process.env.NODE_ENV !== "production") {
