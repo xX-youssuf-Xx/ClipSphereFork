@@ -38,6 +38,8 @@ services:
     env_file: .env
     environment:
       - S3_PUBLIC_ENDPOINT=https://clipsphere.8bitsolutions.net:9000
+      - REDIS_HOST=cache
+      - REDIS_PORT=6379
     depends_on:
       - database
       - cache
@@ -47,17 +49,19 @@ services:
     restart: unless-stopped
 
   # Container B2 — BullMQ Worker (isolated worker process)
-  # TODO: Implement worker service when BullMQ queue system is ready
-  # worker:
-  #   build: ./server
-  #   env_file: .env
-  #   command: bun run worker
-  #   depends_on:
-  #     - database
-  #     - cache
-  #   networks:
-  #     - clipsphere-net
-  #   restart: unless-stopped
+  worker:
+    build: ./server
+    env_file: .env
+    command: node dist/worker.js
+    environment:
+      - REDIS_HOST=cache
+      - REDIS_PORT=6379
+    depends_on:
+      - database
+      - cache
+    networks:
+      - clipsphere-net
+    restart: unless-stopped
 
   # Container C — MongoDB
   database:

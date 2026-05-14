@@ -12,6 +12,7 @@ import {
   generateVideoEmbedding,
 } from "./embeddingService";
 import { deleteFile } from "../utils/presign";
+import { embeddingQueue } from "../queues/embeddingQueue";
 
 /**
  * Convert S3 key to storage URL
@@ -96,29 +97,18 @@ export async function createVideo(ownerId: string, payload: CreateVideoPayload) 
     videoURL: payload.videoURL,
     duration: payload.duration,
     status: payload.status ?? "public",
+    embeddingStatus: "pending",
   });
 
-  try {
-    return await refreshVideoEmbedding(video._id.toString());
-  } catch (error) {
-    const errorText = safeErrorString(error).slice(0, 2000);
-    console.error("[embedding] createVideo embedding update failed", {
-      videoId: video._id.toString(),
-      error: errorText,
-    });
+  // Offload embedding to the BullMQ worker — API returns immediately
+  await embeddingQueue.add(
+    "video-embedding",
+    { type: "video", videoId: video._id.toString() },
+    { jobId: `video-embed-${video._id}` } // deduplicate if re-enqueued
+  );
 
-    const retryCount = (video.embeddingRetryCount ?? 0) + 1;
-    await Video.findByIdAndUpdate(video._id, {
-      embeddingStatus: "failed",
-      embeddingLastError: errorText,
-      embeddingRetryCount: retryCount,
-      embeddingNextRetryAt: computeNextRetryAt(retryCount),
-      embeddingModel: ACTIVE_VIDEO_EMBEDDING_MODEL,
-    });
-
-    if (config.embeddingsMode === "strict") throw error;
-    return video;
-  }
+  console.log(`[queue] Enqueued embedding job for video ${video._id}`);
+  return video;
 }
 
 export async function getVideosByOwner(ownerId: string) {
@@ -181,27 +171,15 @@ export async function updateVideo(videoId: string, payload: UpdateVideoPayload) 
 
   if (!shouldRefreshEmbedding) return video;
 
-  try {
-    return await refreshVideoEmbedding(videoId);
-  } catch (error) {
-    const errorText = safeErrorString(error).slice(0, 2000);
-    console.error("[embedding] updateVideo embedding update failed", {
-      videoId,
-      error: errorText,
-    });
+  // Offload embedding refresh to the BullMQ worker
+  await embeddingQueue.add(
+    "video-embedding",
+    { type: "video", videoId },
+    { jobId: `video-embed-${videoId}-${Date.now()}` }
+  );
 
-    const retryCount = (video.embeddingRetryCount ?? 0) + 1;
-    await Video.findByIdAndUpdate(videoId, {
-      embeddingStatus: "failed",
-      embeddingLastError: errorText,
-      embeddingRetryCount: retryCount,
-      embeddingNextRetryAt: computeNextRetryAt(retryCount),
-      embeddingModel: ACTIVE_VIDEO_EMBEDDING_MODEL,
-    });
-
-    if (config.embeddingsMode === "strict") throw error;
-    return video;
-  }
+  console.log(`[queue] Enqueued re-embedding job for updated video ${videoId}`);
+  return video;
 }
 
 export async function deleteVideo(videoId: string) {
