@@ -177,3 +177,14 @@
     line-height: 1.5;
   }
 }
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@layer utilities {
+  .animate-shimmer {
+    animation: shimmer 1.8s infinite;
+  }
+}

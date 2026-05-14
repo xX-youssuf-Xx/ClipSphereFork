@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Play, Eye, TrendingUp, Users, Clock, Loader2 } from "lucide-react";
+import { Play, Eye, TrendingUp, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { VideoThumbnail } from "@/components/VideoThumbnail";
+import { VideoFeedSkeleton } from "@/components/VideoCardSkeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import API, { getS3Endpoint } from "@/lib/api";
 
@@ -41,6 +42,7 @@ export default function Discover() {
     async function load() {
       if (activeTab === "following" && !user) {
         setVideos([]);
+        setLoading(false);
         return;
       }
 
@@ -103,9 +105,8 @@ export default function Discover() {
             </Link>
           </div>
         ) : loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
-          </div>
+          /* ── Skeleton loaders ── */
+          <VideoFeedSkeleton count={6} />
         ) : sorted.length === 0 ? (
           <div className="text-center py-20 text-zinc-400">
             {activeTab === "following" ? "You aren't following anyone with videos yet!" : "No videos yet. Be the first to upload!"}
@@ -115,25 +116,71 @@ export default function Discover() {
             {sorted.map((video: any) => {
               const owner = video.owner;
               const ownerName = owner?.name ?? owner?.username ?? "Unknown";
-               const ownerAvatar = owner?.avatarKey ? `${S3_ENDPOINT}/clipsphere/${owner.avatarKey}` : "";
+              const ownerAvatar = owner?.avatarKey ? `${S3_ENDPOINT}/clipsphere/${owner.avatarKey}` : "";
 
               return (
-                <Card key={video._id} className="group bg-zinc-900 border-zinc-800 overflow-hidden hover:border-violet-500/50 transition-all">
+                <Card
+                  key={video._id}
+                  className="group bg-zinc-900 border-zinc-800 overflow-hidden hover:border-violet-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-violet-900/20"
+                >
                   <Link href={`/video/${video._id}`}>
-                    <div className="relative aspect-video bg-zinc-800 flex items-center justify-center overflow-hidden">
-                      {video.videoURL ? <VideoThumbnail videoUrl={video.videoURL} className="absolute inset-0 z-0 opacity-80 group-hover:opacity-100 transition-opacity duration-500" /> : null}
-                      <Play className="absolute z-10 w-12 h-12 text-white/40 drop-shadow-lg group-hover:opacity-0 transition-opacity" />
-                      <div className="absolute inset-0 z-10 bg-gradient-to-t from-zinc-950/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div className="w-14 h-14 rounded-full bg-violet-600/90 backdrop-blur-sm flex items-center justify-center shadow-xl shadow-violet-900/50">
-                          <Play className="w-7 h-7 text-white ml-1" fill="currentColor" />
+                    <div className="relative aspect-video bg-zinc-800 overflow-hidden">
+                      {/* Thumbnail */}
+                      {video.videoURL ? (
+                        <VideoThumbnail
+                          videoUrl={video.videoURL}
+                          className="absolute inset-0 z-0 w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
+                        />
+                      ) : null}
+
+                      {/* ── Glassmorphism gradient overlay ── */}
+                      <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300" />
+
+                      {/* ── Glassmorphism play button ── */}
+                      <div className="absolute inset-0 z-20 flex items-center justify-center">
+                        {/* Idle: subtle translucent icon */}
+                        <div className="group-hover:opacity-0 transition-opacity duration-200">
+                          <Play className="w-12 h-12 text-white/30 drop-shadow-lg" />
+                        </div>
+                        {/* Hover: full glass pill */}
+                        <div className="absolute opacity-0 group-hover:opacity-100 transition-all duration-300 scale-90 group-hover:scale-100">
+                          <div className="w-16 h-16 rounded-full flex items-center justify-center
+                                          bg-white/10 backdrop-blur-md
+                                          border border-white/20
+                                          shadow-2xl shadow-violet-900/60
+                                          ring-1 ring-violet-400/30">
+                            <Play className="w-7 h-7 text-white ml-1" fill="currentColor" />
+                          </div>
                         </div>
                       </div>
-                      <Badge className="absolute z-20 top-2 right-2 bg-zinc-950/90 text-white border-0 text-xs">
+
+                      {/* ── Glassmorphism duration badge ── */}
+                      <Badge className="absolute z-20 top-2 right-2
+                                        bg-black/40 backdrop-blur-md
+                                        border border-white/10
+                                        text-white text-xs font-medium
+                                        shadow-sm">
                         {formatDuration(video.duration ?? 0)}
                       </Badge>
-                      <div className="absolute z-20 bottom-2 left-2 flex items-center gap-2 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="flex items-center gap-1 font-semibold drop-shadow-md"><Eye className="w-3 h-3" />{formatCount(video.viewsCount ?? 0)}</span>
+
+                      {/* ── Glassmorphism stats bar (bottom on hover) ── */}
+                      <div className="absolute z-20 bottom-0 left-0 right-0
+                                      px-3 py-2
+                                      bg-black/30 backdrop-blur-md
+                                      border-t border-white/5
+                                      flex items-center gap-3 text-white text-xs
+                                      translate-y-full group-hover:translate-y-0
+                                      transition-transform duration-300 ease-out">
+                        <span className="flex items-center gap-1 font-medium">
+                          <Eye className="w-3 h-3 opacity-70" />
+                          {formatCount(video.viewsCount ?? 0)}
+                        </span>
+                        {video.avgRating > 0 && (
+                          <span className="flex items-center gap-1 font-medium ml-auto">
+                            <span className="text-yellow-400">★</span>
+                            {video.avgRating.toFixed(1)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </Link>
@@ -145,26 +192,17 @@ export default function Discover() {
                       </h3>
                     </Link>
 
-                    <div className="flex items-center justify-between">
-                      <Link href={`/profile/${owner?._id ?? owner?.id}`} className="flex items-center gap-2 flex-1 min-w-0">
-                        <Avatar className="w-7 h-7">
-                          <AvatarImage src={ownerAvatar} />
-                          <AvatarFallback className="text-xs bg-violet-800 text-white">
-                            {ownerName[0]?.toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-zinc-400 hover:text-white transition-colors truncate">
-                          {ownerName}
-                        </span>
-                      </Link>
-
-                      {video.avgRating > 0 && (
-                        <div className="flex items-center gap-1 text-sm shrink-0">
-                          <span className="text-yellow-500">★</span>
-                          <span className="text-white font-medium">{video.avgRating.toFixed(1)}</span>
-                        </div>
-                      )}
-                    </div>
+                    <Link href={`/profile/${owner?._id ?? owner?.id}`} className="flex items-center gap-2">
+                      <Avatar className="w-7 h-7">
+                        <AvatarImage src={ownerAvatar} />
+                        <AvatarFallback className="text-xs bg-violet-800 text-white">
+                          {ownerName[0]?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm text-zinc-400 hover:text-white transition-colors truncate">
+                        {ownerName}
+                      </span>
+                    </Link>
                   </div>
                 </Card>
               );
