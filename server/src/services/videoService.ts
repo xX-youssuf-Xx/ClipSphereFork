@@ -11,7 +11,7 @@ import {
   ACTIVE_VIDEO_EMBEDDING_MODEL,
   generateVideoEmbedding,
 } from "./embeddingService";
-import { createDownloadUrl, deleteFile } from "../utils/presign";
+import { deleteFile } from "../utils/presign";
 
 type CreateVideoPayload = {
   title: string;
@@ -116,19 +116,12 @@ export async function getVideosByOwner(ownerId: string) {
     .sort({ createdAt: -1 })
     .populate("owner", "username name avatarKey");
 
-  const videosWithUrls = await Promise.all(
-    videos.map(async (v) => {
-      const video = v.toObject();
-      try {
-        video.videoURL = await createDownloadUrl(video.videoURL);
-      } catch (error) {
-        console.error(`Failed to generate download URL for video ${video._id}:`, error);
-      }
-      return video;
-    })
-  );
-
-  return videosWithUrls;
+  return videos.map(v => {
+    const video = v.toObject();
+    // Return S3 key directly, will be proxied through Nginx
+    video.videoURL = `/storage/${video.videoURL}`;
+    return video;
+  });
 }
 
 export async function getAllPublicVideos() {
@@ -136,22 +129,12 @@ export async function getAllPublicVideos() {
     .sort({ createdAt: -1 })
     .populate("owner", "username name avatarKey");
 
-  // Generate presigned URLs for each video
-  const videosWithUrls = await Promise.all(
-    videos.map(async (v) => {
-      const video = v.toObject();
-      try {
-        // Assume videoURL stores the S3 key
-        video.videoURL = await createDownloadUrl(video.videoURL);
-      } catch (error) {
-        console.error(`Failed to generate download URL for video ${video._id}:`, error);
-        // Fallback to original or null if failed
-      }
-      return video;
-    })
-  );
-
-  return videosWithUrls;
+  return videos.map(v => {
+    const video = v.toObject();
+    // Return S3 key directly, will be proxied through Nginx
+    video.videoURL = `/storage/${video.videoURL}`;
+    return video;
+  });
 }
 
 export async function getVideo(videoId: string) {
@@ -161,11 +144,8 @@ export async function getVideo(videoId: string) {
   if (!video) throw new AppError("Video not found", 404);
 
   const videoObj = video.toObject();
-  try {
-    videoObj.videoURL = await createDownloadUrl(videoObj.videoURL);
-  } catch (error) {
-    console.error(`Failed to generate download URL for video ${videoId}:`, error);
-  }
+  // Return S3 key directly, will be proxied through Nginx
+  videoObj.videoURL = `/storage/${videoObj.videoURL}`;
 
   return videoObj;
 }
@@ -347,9 +327,7 @@ export async function getFollowingVideos(userId: string) {
     .sort({ createdAt: -1 })
     .lean();
 
-  return Promise.all(
-    videos.map(async (v) => {
-      try { return { ...v, videoURL: await createDownloadUrl(v.videoURL) }; } catch { return v; }
-    })
-  );
+  return videos.map((v) => {
+    return { ...v, videoURL: `/storage/${v.videoURL}` };
+  });
 }

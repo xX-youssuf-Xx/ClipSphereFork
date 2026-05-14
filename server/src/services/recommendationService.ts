@@ -6,19 +6,12 @@ import Video from "../models/Video";
 import WatchHistory from "../models/WatchHistory";
 import AppError from "../utils/AppError";
 import { generateVideoEmbedding } from "./embeddingService";
-import { createDownloadUrl } from "../utils/presign";
 
-async function attachPresignedUrls(videos: any[]) {
-  return Promise.all(
-    videos.map(async (v) => {
-      if (!v.videoURL) return v;
-      try {
-        return { ...v, videoURL: await createDownloadUrl(v.videoURL) };
-      } catch {
-        return v;
-      }
-    })
-  );
+function attachStorageUrls(videos: any[]) {
+  return videos.map((v) => {
+    if (!v.videoURL) return v;
+    return { ...v, videoURL: `/storage/${v.videoURL}` };
+  });
 }
 
 type RecommendByVectorOptions = {
@@ -195,7 +188,7 @@ async function trendingVideos(limit: number) {
     },
   ]);
 
-  return attachPresignedUrls(results);
+  return attachStorageUrls(results);
 }
 
 export async function recommendTrendingVideos(limit = 12) {
@@ -277,7 +270,7 @@ export async function recommendVideosByVector(
     },
   ]);
 
-  return attachPresignedUrls(results);
+  return attachStorageUrls(results);
 }
 
 export async function recommendVideosFromTextQuery(
