@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.post("/create-session", protect, createTipSession);
 
-router.post("/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
+router.post("/webhook", handleStripeWebhook);
 
 export default router;
