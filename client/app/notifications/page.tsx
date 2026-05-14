@@ -127,10 +127,10 @@ export default function NotificationsPage() {
                   >
                     <div className="flex items-start gap-4">
                       {/* Actor avatar */}
-                      <Avatar className="w-10 h-10 shrink-0">
-                        {actor?.avatarKey && (
-                          <AvatarImage src={`http://localhost:9000/clipsphere/${actor.avatarKey}`} />
-                        )}
+                       <Avatar className="w-10 h-10 shrink-0">
+                         {actor?.avatarKey && (
+                           <AvatarImage src={`https://clipsphere.8bitsolutions.net/storage/clipsphere/${actor.avatarKey}`} />
+                         )}
                         <AvatarFallback className="bg-violet-800 text-white text-sm">
                           {initials}
                         </AvatarFallback>

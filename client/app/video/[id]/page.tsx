@@ -376,7 +376,7 @@ export default function VideoPlayerPage({ params }: { params: Promise<{ id: stri
                 <Link href={`/profile/${video.owner?._id || video.owner?.id}`} className="flex items-center gap-4">
                   <Avatar className="w-12 h-12 ring-2 ring-violet-500/20 hover:ring-violet-500/50 transition-all">
                     {video.owner?.avatarKey && (
-                      <AvatarImage src={`http://localhost:9000/clipsphere/${video.owner.avatarKey}`} />
+                      <AvatarImage src={`https://clipsphere.8bitsolutions.net/storage/clipsphere/${video.owner.avatarKey}`} />
                     )}
                     <AvatarFallback className="bg-violet-600">{(video.owner?.name || video.owner?.username || "U")[0]?.toUpperCase()}</AvatarFallback>
                   </Avatar>

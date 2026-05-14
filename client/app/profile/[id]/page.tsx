@@ -158,7 +158,7 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
         <div className="flex flex-col md:flex-row gap-6 mb-8">
           <Avatar className="w-28 h-28 md:w-36 md:h-36 ring-4 ring-zinc-950">
             {user.avatarKey ? (
-              <AvatarImage src={`http://localhost:9000/clipsphere/${user.avatarKey}`} />
+              <AvatarImage src={`https://clipsphere.8bitsolutions.net/storage/clipsphere/${user.avatarKey}`} />
             ) : null}
             <AvatarFallback className="text-3xl bg-violet-800 text-white">
               {(user.name ?? user.username)?.[0]?.toUpperCase()}
