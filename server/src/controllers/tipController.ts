@@ -107,8 +107,8 @@ export const handleStripeWebhook = async (req: Request, res: Response, _next: Ne
 
   let event: any;
   try {
-    // Pass the raw Buffer directly - Stripe needs the exact bytes it originally sent
-    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+    // Must use async variant — Bun uses SubtleCrypto (Web Crypto API) which is async-only
+    event = await stripe.webhooks.constructEventAsync(rawBody, sig, endpointSecret);
   } catch (err: any) {
     console.error("Webhook signature error:", err.message);
     return res.status(400).json({ message: `Webhook Error: ${err.message}` });
