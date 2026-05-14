@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import API, { getS3Endpoint } from "@/lib/api";
 
-const API = "http://localhost:5000/api/v1";
+const S3_ENDPOINT = getS3Endpoint();
 
 function authHeaders() {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -126,10 +127,10 @@ export default function NotificationsPage() {
                   >
                     <div className="flex items-start gap-4">
                       {/* Actor avatar */}
-                      <Avatar className="w-10 h-10 shrink-0">
-                        {actor?.avatarKey && (
-                          <AvatarImage src={`http://localhost:9000/clipsphere/${actor.avatarKey}`} />
-                        )}
+                       <Avatar className="w-10 h-10 shrink-0">
+                         {actor?.avatarKey && (
+                           <AvatarImage src={`https://clipsphere.8bitsolutions.net/storage/clipsphere/${actor.avatarKey}`} />
+                         )}
                         <AvatarFallback className="bg-violet-800 text-white text-sm">
                           {initials}
                         </AvatarFallback>

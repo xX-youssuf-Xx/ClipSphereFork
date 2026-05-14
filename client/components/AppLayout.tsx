@@ -10,8 +10,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import API, { getBaseUrl, getS3Endpoint } from "@/lib/api";
 
-const API = "http://localhost:5000/api/v1";
+const S3_ENDPOINT = getS3Endpoint();
+const SOCKET_URL = getBaseUrl();
 
 function useUnreadCount(userId: string | undefined) {
   const [count, setCount] = useState(0);
@@ -30,7 +32,7 @@ function useUnreadCount(userId: string | undefined) {
       .catch(() => {});
 
     // Real-time updates via Socket.IO
-    const socket = io("http://localhost:5000", { auth: { token } });
+    const socket = io(SOCKET_URL, { auth: { token } });
 
     socket.on("notification", () => {
       setCount((prev) => prev + 1);
@@ -51,7 +53,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const [unreadCount, resetUnreadCount] = useUnreadCount(user?.id);
   const isAuthPage = pathname === "/auth" || pathname === "/oauth" || pathname === "/verify";
-  const avatarSrc = user?.avatarKey ? `http://localhost:9000/clipsphere/${user.avatarKey}` : "";
+  const avatarSrc = user?.avatarKey ? `${S3_ENDPOINT}/clipsphere/${user.avatarKey}` : "";
   const avatarFallback = (user?.name ?? user?.username ?? "?").substring(0, 2).toUpperCase();
 
   if (isAuthPage) {

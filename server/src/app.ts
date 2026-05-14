@@ -1,15 +1,27 @@
-import express from "express";
+import express, { type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import routes from "./routes/index"
 import requestLogger from "./middleware/logger";
 import applySecurityMiddlewares from "./middleware/security";
 import { notFoundHandler, globalErrorHandler } from "./middleware/errorHandler";
 import passport from "./config/passport";
+import stripe from "./config/stripe";
+
+export interface CustomRequest extends Request {
+  rawBody?: Buffer;
+}
+
 export default function createApp() {
   const app = express();
 
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ 
+    limit: '200mb',
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf; // Keep as Buffer for Stripe webhook signature verification
+    }
+  }));
+  app.use(express.urlencoded({ limit: '200mb' }));
   app.use(passport.initialize());
 
   app.use(requestLogger);

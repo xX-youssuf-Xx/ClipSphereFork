@@ -11,7 +11,18 @@ import {
   ACTIVE_VIDEO_EMBEDDING_MODEL,
   generateVideoEmbedding,
 } from "./embeddingService";
-import { createDownloadUrl, deleteFile } from "../utils/presign";
+import { deleteFile } from "../utils/presign";
+import { embeddingQueue } from "../queues/embeddingQueue";
+
+/**
+ * Convert S3 key to storage URL
+ * S3 key: videos/userid/uuid.mp4
+ * Storage URL: /storage/clipsphere/videos/userid/uuid.mp4
+ */
+function getStorageUrl(s3Key: string): string {
+  const bucket = process.env.S3_BUCKET || "clipsphere";
+  return `/storage/${bucket}/${s3Key}`;
+}
 
 type CreateVideoPayload = {
   title: string;
@@ -86,29 +97,18 @@ export async function createVideo(ownerId: string, payload: CreateVideoPayload) 
     videoURL: payload.videoURL,
     duration: payload.duration,
     status: payload.status ?? "public",
+    embeddingStatus: "pending",
   });
 
-  try {
-    return await refreshVideoEmbedding(video._id.toString());
-  } catch (error) {
-    const errorText = safeErrorString(error).slice(0, 2000);
-    console.error("[embedding] createVideo embedding update failed", {
-      videoId: video._id.toString(),
-      error: errorText,
-    });
+  // Offload embedding to the BullMQ worker — API returns immediately
+  await embeddingQueue.add(
+    "video-embedding",
+    { type: "video", videoId: video._id.toString() },
+    { jobId: `video-embed-${video._id}` } // deduplicate if re-enqueued
+  );
 
-    const retryCount = (video.embeddingRetryCount ?? 0) + 1;
-    await Video.findByIdAndUpdate(video._id, {
-      embeddingStatus: "failed",
-      embeddingLastError: errorText,
-      embeddingRetryCount: retryCount,
-      embeddingNextRetryAt: computeNextRetryAt(retryCount),
-      embeddingModel: ACTIVE_VIDEO_EMBEDDING_MODEL,
-    });
-
-    if (config.embeddingsMode === "strict") throw error;
-    return video;
-  }
+  console.log(`[queue] Enqueued embedding job for video ${video._id}`);
+  return video;
 }
 
 export async function getVideosByOwner(ownerId: string) {
@@ -116,19 +116,12 @@ export async function getVideosByOwner(ownerId: string) {
     .sort({ createdAt: -1 })
     .populate("owner", "username name avatarKey");
 
-  const videosWithUrls = await Promise.all(
-    videos.map(async (v) => {
-      const video = v.toObject();
-      try {
-        video.videoURL = await createDownloadUrl(video.videoURL);
-      } catch (error) {
-        console.error(`Failed to generate download URL for video ${video._id}:`, error);
-      }
-      return video;
-    })
-  );
-
-  return videosWithUrls;
+  return videos.map(v => {
+    const video = v.toObject();
+    // Return storage proxied URL
+    video.videoURL = getStorageUrl(video.videoURL);
+    return video;
+  });
 }
 
 export async function getAllPublicVideos() {
@@ -136,22 +129,12 @@ export async function getAllPublicVideos() {
     .sort({ createdAt: -1 })
     .populate("owner", "username name avatarKey");
 
-  // Generate presigned URLs for each video
-  const videosWithUrls = await Promise.all(
-    videos.map(async (v) => {
-      const video = v.toObject();
-      try {
-        // Assume videoURL stores the S3 key
-        video.videoURL = await createDownloadUrl(video.videoURL);
-      } catch (error) {
-        console.error(`Failed to generate download URL for video ${video._id}:`, error);
-        // Fallback to original or null if failed
-      }
-      return video;
-    })
-  );
-
-  return videosWithUrls;
+  return videos.map(v => {
+    const video = v.toObject();
+    // Return storage proxied URL
+    video.videoURL = getStorageUrl(video.videoURL);
+    return video;
+  });
 }
 
 export async function getVideo(videoId: string) {
@@ -161,11 +144,8 @@ export async function getVideo(videoId: string) {
   if (!video) throw new AppError("Video not found", 404);
 
   const videoObj = video.toObject();
-  try {
-    videoObj.videoURL = await createDownloadUrl(videoObj.videoURL);
-  } catch (error) {
-    console.error(`Failed to generate download URL for video ${videoId}:`, error);
-  }
+  // Return storage proxied URL
+  videoObj.videoURL = getStorageUrl(videoObj.videoURL);
 
   return videoObj;
 }
@@ -191,27 +171,15 @@ export async function updateVideo(videoId: string, payload: UpdateVideoPayload) 
 
   if (!shouldRefreshEmbedding) return video;
 
-  try {
-    return await refreshVideoEmbedding(videoId);
-  } catch (error) {
-    const errorText = safeErrorString(error).slice(0, 2000);
-    console.error("[embedding] updateVideo embedding update failed", {
-      videoId,
-      error: errorText,
-    });
+  // Offload embedding refresh to the BullMQ worker
+  await embeddingQueue.add(
+    "video-embedding",
+    { type: "video", videoId },
+    { jobId: `video-embed-${videoId}-${Date.now()}` }
+  );
 
-    const retryCount = (video.embeddingRetryCount ?? 0) + 1;
-    await Video.findByIdAndUpdate(videoId, {
-      embeddingStatus: "failed",
-      embeddingLastError: errorText,
-      embeddingRetryCount: retryCount,
-      embeddingNextRetryAt: computeNextRetryAt(retryCount),
-      embeddingModel: ACTIVE_VIDEO_EMBEDDING_MODEL,
-    });
-
-    if (config.embeddingsMode === "strict") throw error;
-    return video;
-  }
+  console.log(`[queue] Enqueued re-embedding job for updated video ${videoId}`);
+  return video;
 }
 
 export async function deleteVideo(videoId: string) {
@@ -347,9 +315,7 @@ export async function getFollowingVideos(userId: string) {
     .sort({ createdAt: -1 })
     .lean();
 
-  return Promise.all(
-    videos.map(async (v) => {
-      try { return { ...v, videoURL: await createDownloadUrl(v.videoURL) }; } catch { return v; }
-    })
-  );
+  return videos.map((v) => {
+    return { ...v, videoURL: getStorageUrl(v.videoURL) };
+  });
 }

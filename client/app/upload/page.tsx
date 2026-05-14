@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import API from "@/lib/api";
 
 export default function Upload() {
   const [file, setFile] = useState<File | null>(null);
@@ -106,7 +107,7 @@ export default function Upload() {
         xhr.addEventListener("error", () => reject(new Error("Network error during upload.")));
         xhr.addEventListener("abort", () => reject(new Error("Upload was cancelled.")));
 
-        xhr.open("POST", "http://localhost:5000/api/v1/videos");
+        xhr.open("POST", `${API}/videos`);
         xhr.setRequestHeader("Authorization", `Bearer ${token}`);
         xhr.send(formData);
       });

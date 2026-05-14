@@ -10,8 +10,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import API, { getS3Endpoint } from "@/lib/api";
 
-const API = "http://localhost:5000/api/v1";
+const S3_ENDPOINT = getS3Endpoint();
 
 function authHeaders() {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;

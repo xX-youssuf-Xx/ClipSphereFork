@@ -17,7 +17,7 @@ export function VideoThumbnail({ videoUrl, className = "" }: VideoThumbnailProps
 
     let videoSrc = videoUrl;
     if (!videoSrc.startsWith("http")) {
-      videoSrc = `http://localhost:9000/clipsphere/${videoUrl}`;
+      videoSrc = `https://clipsphere.8bitsolutions.net${videoUrl}`;
     }
 
     const video = document.createElement("video");

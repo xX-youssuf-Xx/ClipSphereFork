@@ -49,6 +49,9 @@ const config = {
   geminiApiKey: process.env.GEMINI_API_KEY || "",
   geminiEmbeddingModel: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-001",
   mongoVideoVectorIndexName: process.env.MONGO_VIDEO_VECTOR_INDEX_NAME || "videos_embedding_index",
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
+  redisHost: process.env.REDIS_HOST || "cache",
+  redisPort: Number(process.env.REDIS_PORT) || 6379,
 };
 
 export default config;
