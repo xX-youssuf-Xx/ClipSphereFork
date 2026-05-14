@@ -101,24 +101,62 @@ export const handleStripeWebhook = async (req: Request, res: Response, _next: Ne
     return res.status(400).json({ message: "Raw body not available" });
   }
 
-  console.log("Webhook - rawBody type:", typeof rawBody, Buffer.isBuffer(rawBody));
-  console.log("Webhook - rawBody length:", rawBody.length);
-  console.log("Webhook - sig header prefix:", sig?.substring(0, 30));
+  // Parse the stripe-signature header: t=timestamp,v1=sig1,v1=sig2...
+  const sigParts = sig.split(",");
+  const timestamp = sigParts.find(p => p.startsWith("t="))?.slice(2);
+  const stripeSignatures = sigParts
+    .filter(p => p.startsWith("v1="))
+    .map(p => p.slice(3));
+
+  if (!timestamp || stripeSignatures.length === 0) {
+    return res.status(400).json({ message: "Invalid stripe-signature header" });
+  }
+
+  // Manual HMAC-SHA256 using Node's native crypto — bypasses Stripe SDK crypto provider issues
+  const crypto = await import("crypto");
+  const signedPayload = `${timestamp}.${rawBody.toString("utf8")}`;
+  const computedSig = crypto
+    .createHmac("sha256", endpointSecret)
+    .update(signedPayload, "utf8")
+    .digest("hex");
+
+  // Timing-safe comparison against all v1 signatures Stripe sent
+  const computedBuf = Buffer.from(computedSig, "hex");
+  const isValid = stripeSignatures.some(s => {
+    try {
+      return crypto.timingSafeEqual(computedBuf, Buffer.from(s, "hex"));
+    } catch {
+      return false;
+    }
+  });
+
+  // Diagnostic logging — remove once working
+  console.log("Webhook - timestamp:", timestamp);
+  console.log("Webhook - body length:", rawBody.length);
+  console.log("Webhook - body first 30 bytes (hex):", rawBody.subarray(0, 30).toString("hex"));
+  console.log("Webhook - computed sig:", computedSig.substring(0, 20));
+  console.log("Webhook - stripe sig[0]:", stripeSignatures[0]?.substring(0, 20));
+  console.log("Webhook - secret prefix:", endpointSecret.substring(0, 12));
+  console.log("Webhook - sigs match:", isValid);
+
+  if (!isValid) {
+    const ageSeconds = Math.floor(Date.now() / 1000) - parseInt(timestamp, 10);
+    console.error(`Webhook - signature mismatch (event age: ${ageSeconds}s)`);
+    return res.status(400).json({ message: "Webhook signature verification failed" });
+  }
 
   let event: any;
   try {
-    // Must use async variant — Bun uses SubtleCrypto (Web Crypto API) which is async-only
-    event = await stripe.webhooks.constructEventAsync(rawBody, sig, endpointSecret);
-  } catch (err: any) {
-    console.error("Webhook signature error:", err.message);
-    return res.status(400).json({ message: `Webhook Error: ${err.message}` });
+    event = JSON.parse(rawBody.toString("utf8"));
+  } catch {
+    return res.status(400).json({ message: "Invalid JSON body" });
   }
 
   console.log("Webhook event received:", event.type);
 
   if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-    const { recipientId } = session.metadata || {};
+    const session = event.data?.object;
+    const { recipientId } = session?.metadata || {};
 
     if (recipientId) {
       await Tip.findOneAndUpdate(
