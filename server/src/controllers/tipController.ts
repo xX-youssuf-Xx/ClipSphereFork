@@ -127,6 +127,23 @@ export const handleStripeWebhook = async (req: Request, res: Response, _next: Ne
     return res.status(500).json({ message: "Webhook secret not configured" });
   }
 
+  // Debug: Create expected signature manually to compare
+  const timestamp = sig.split(',').find(p => p.startsWith('t='))?.split('=')[1];
+  const signature = sig.split(',').find(p => p.startsWith('v1='))?.split('=')[1];
+  
+  console.log("Webhook - timestamp from Stripe:", timestamp);
+  console.log("Webhook - signature from Stripe:", signature);
+  console.log("Webhook - endpointSecret length:", endpointSecret?.length);
+  
+  // Compute expected signature
+  const crypto = await import('crypto');
+  const expectedSig = crypto.createHmac('sha256', endpointSecret)
+    .update(body)
+    .digest('hex');
+  console.log("Webhook - expected sig:", expectedSig);
+  console.log("Webhook - actual sig:", signature);
+  console.log("Webhook - sigs match:", expectedSig === signature);
+  
   let event: any;
   try {
     event = await stripe.webhooks.constructEventAsync(body, sig, endpointSecret);
