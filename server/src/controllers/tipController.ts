@@ -123,7 +123,7 @@ export const handleStripeWebhook = async (req: Request, res: Response, _next: Ne
 
   let event: any;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
+    event = await stripe.webhooks.constructEventAsync(body, sig, endpointSecret);
   } catch (err: any) {
     console.error("Webhook signature error:", err.message);
     return res.status(400).json({ message: `Webhook Error: ${err.message}` });
