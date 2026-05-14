@@ -7,10 +7,20 @@ import WatchHistory from "../models/WatchHistory";
 import AppError from "../utils/AppError";
 import { generateVideoEmbedding } from "./embeddingService";
 
+/**
+ * Convert S3 key to storage URL
+ * S3 key: videos/userid/uuid.mp4
+ * Storage URL: /storage/clipsphere/videos/userid/uuid.mp4
+ */
+function getStorageUrl(s3Key: string): string {
+  const bucket = process.env.S3_BUCKET || "clipsphere";
+  return `/storage/${bucket}/${s3Key}`;
+}
+
 function attachStorageUrls(videos: any[]) {
   return videos.map((v) => {
     if (!v.videoURL) return v;
-    return { ...v, videoURL: `/storage/${v.videoURL}` };
+    return { ...v, videoURL: getStorageUrl(v.videoURL) };
   });
 }
 

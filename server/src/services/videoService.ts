@@ -13,6 +13,16 @@ import {
 } from "./embeddingService";
 import { deleteFile } from "../utils/presign";
 
+/**
+ * Convert S3 key to storage URL
+ * S3 key: videos/userid/uuid.mp4
+ * Storage URL: /storage/clipsphere/videos/userid/uuid.mp4
+ */
+function getStorageUrl(s3Key: string): string {
+  const bucket = process.env.S3_BUCKET || "clipsphere";
+  return `/storage/${bucket}/${s3Key}`;
+}
+
 type CreateVideoPayload = {
   title: string;
   description?: string;
@@ -118,8 +128,8 @@ export async function getVideosByOwner(ownerId: string) {
 
   return videos.map(v => {
     const video = v.toObject();
-    // Return S3 key directly, will be proxied through Nginx
-    video.videoURL = `/storage/${video.videoURL}`;
+    // Return storage proxied URL
+    video.videoURL = getStorageUrl(video.videoURL);
     return video;
   });
 }
@@ -131,8 +141,8 @@ export async function getAllPublicVideos() {
 
   return videos.map(v => {
     const video = v.toObject();
-    // Return S3 key directly, will be proxied through Nginx
-    video.videoURL = `/storage/${video.videoURL}`;
+    // Return storage proxied URL
+    video.videoURL = getStorageUrl(video.videoURL);
     return video;
   });
 }
@@ -144,8 +154,8 @@ export async function getVideo(videoId: string) {
   if (!video) throw new AppError("Video not found", 404);
 
   const videoObj = video.toObject();
-  // Return S3 key directly, will be proxied through Nginx
-  videoObj.videoURL = `/storage/${videoObj.videoURL}`;
+  // Return storage proxied URL
+  videoObj.videoURL = getStorageUrl(videoObj.videoURL);
 
   return videoObj;
 }
@@ -328,6 +338,6 @@ export async function getFollowingVideos(userId: string) {
     .lean();
 
   return videos.map((v) => {
-    return { ...v, videoURL: `/storage/${v.videoURL}` };
+    return { ...v, videoURL: getStorageUrl(v.videoURL) };
   });
 }
