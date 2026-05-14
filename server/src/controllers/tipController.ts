@@ -91,7 +91,7 @@ export const handleStripeWebhook = async (req: Request, res: Response, _next: Ne
   console.log("Webhook - has rawBody:", !!body);
   console.log("Webhook - rawBody length:", body?.length);
   console.log("Webhook - rawBody preview:", body?.substring(0, 100));
-  console.log("Webhook - signature header:", req.headers["stripe-signature"]?.substring(0, 20));
+  console.log("Webhook - signature header:", Array.isArray(req.headers["stripe-signature"]) ? req.headers["stripe-signature"][0]?.substring(0, 20) : req.headers["stripe-signature"]?.substring(0, 20));
   
   // For local development without signature verification
   if (process.env.NODE_ENV !== "production") {
