@@ -135,6 +135,11 @@ export const handleStripeWebhook = async (req: Request, res: Response, _next: Ne
   console.log("Webhook - timestamp:", timestamp);
   console.log("Webhook - stripe signature:", stripeSignature?.substring(0, 20));
   
+  // Debug: Check body for any hidden characters
+  console.log("Webhook - body starts with:", body.substring(0, 50).replace(/\n/g, '\\n'));
+  console.log("Webhook - body ends with:", body.substring(body.length - 50).replace(/\n/g, '\\n'));
+  console.log("Webhook - body trim ends with:", body.trimEnd().substring(body.trimEnd().length - 50).replace(/\n/g, '\\n'));
+  
   // Compute expected signature - Stripe uses: HMAC-SHA256(timestamp.body, secret)
   const crypto = await import('crypto');
   const signedPayload = `${timestamp}.${body}`;
@@ -142,7 +147,8 @@ export const handleStripeWebhook = async (req: Request, res: Response, _next: Ne
     .update(signedPayload, 'utf8')
     .digest('hex');
   
-  console.log("Webhook - computed sig:", expectedSig?.substring(0, 20));
+  console.log("Webhook - signedPayload length:", signedPayload.length);
+  console.log("Webhook - computed sig:", expectedSig);
   console.log("Webhook - sigs match:", expectedSig === stripeSignature);
   
   let event: any;
